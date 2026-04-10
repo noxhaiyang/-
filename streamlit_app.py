@@ -18,7 +18,8 @@ GAME_THUMB_WIDTH = 72
 _COMPACT_CSS = """
 <style>
     .block-container {
-        padding-top: 0.6rem !important;
+        /* Cloud 托管页面有顶栏时，预留更大的顶部安全区 */
+        padding-top: calc(2.2rem + env(safe-area-inset-top, 0px)) !important;
         padding-bottom: 0.4rem !important;
         max-width: 1180px !important;
     }
@@ -82,6 +83,8 @@ def _render_game_tile(game: str, tile_index: int) -> None:
 
 st.set_page_config(page_title="视频封面生成", layout="wide")
 st.markdown(_COMPACT_CSS, unsafe_allow_html=True)
+# 额外顶部占位，避免某些浏览器/宿主容器把首个标题顶住
+st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
 
 st.title("竖版视频封面生成器")
 st.caption(f"{WIDTH}×{HEIGHT}；底图 assets/games/")
