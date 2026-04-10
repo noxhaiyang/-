@@ -29,21 +29,41 @@ def _resize_cover(img: Image.Image, target_w: int, target_h: int) -> Image.Image
     return img.crop((left, top, left + tw, top + th))
 
 
-def _windows_font_candidates(bold: bool) -> list[Path]:
+def _font_candidates(bold: bool) -> list[str]:
+    # Windows 常见中文字体
     windir = os.environ.get("WINDIR", r"C:\Windows")
-    fonts = Path(windir) / "Fonts"
-    regular = [fonts / "msyh.ttc", fonts / "simhei.ttf", fonts / "simsun.ttc"]
-    bold_faces = [fonts / "msyhbd.ttc", fonts / "msyh.ttc"]
-    return bold_faces if bold else regular
+    win_fonts = Path(windir) / "Fonts"
+    windows = [
+        str(win_fonts / "msyhbd.ttc"),
+        str(win_fonts / "msyh.ttc"),
+        str(win_fonts / "simhei.ttf"),
+        str(win_fonts / "simsun.ttc"),
+    ]
+    # Linux / macOS 常见字体（Streamlit Cloud 多为 Linux）
+    linux_macos = [
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+        "/System/Library/Fonts/PingFang.ttc",
+        "/System/Library/Fonts/STHeiti Light.ttc",
+    ]
+    # Pillow 自带/可解析的回退字体（至少保证字号生效）
+    pillow_fallback = [
+        "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf",
+        "Arial.ttf",
+    ]
+    if bold:
+        return windows + linux_macos + pillow_fallback
+    return windows[1:] + linux_macos + pillow_fallback
 
 
 def _load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    for p in _windows_font_candidates(bold):
-        if p.exists():
-            try:
-                return ImageFont.truetype(str(p), size=size, index=0)
-            except OSError:
-                continue
+    for font_name in _font_candidates(bold):
+        try:
+            return ImageFont.truetype(font_name, size=size, index=0)
+        except OSError:
+            continue
     return ImageFont.load_default()
 
 
