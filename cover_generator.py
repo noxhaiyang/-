@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import os
 import textwrap
+import urllib.request
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -58,12 +59,41 @@ def _font_candidates(bold: bool) -> list[str]:
     return windows[1:] + linux_macos + pillow_fallback
 
 
+def _download_noto_cjk_font(bold: bool) -> str | None:
+    """
+    云端无可用中文字体时，下载开源 Noto CJK 到本地缓存目录。
+    仅作为最后兜底，下载失败则返回 None。
+    """
+    cache_dir = Path(__file__).resolve().parent / ".font_cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    filename = "NotoSansCJKsc-Bold.otf" if bold else "NotoSansCJKsc-Regular.otf"
+    target = cache_dir / filename
+    if target.is_file():
+        return str(target)
+
+    url = (
+        "https://github.com/notofonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/"
+        + filename
+    )
+    try:
+        urllib.request.urlretrieve(url, str(target))
+    except Exception:
+        return None
+    return str(target) if target.is_file() else None
+
+
 def _load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     for font_name in _font_candidates(bold):
         try:
             return ImageFont.truetype(font_name, size=size, index=0)
         except OSError:
             continue
+    downloaded = _download_noto_cjk_font(bold)
+    if downloaded:
+        try:
+            return ImageFont.truetype(downloaded, size=size, index=0)
+        except OSError:
+            pass
     return ImageFont.load_default()
 
 
